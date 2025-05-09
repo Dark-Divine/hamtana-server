@@ -12,17 +12,16 @@ import { UploadModule } from './upload/upload.module';
 import { PostModule } from './post/post.module';
 import { SocialModule } from './social/social.module';
 import { I18nModule } from 'nestjs-i18n';
-import * as path from 'path';
 
 @Module({
   imports: [
-    I18nModule.forRoot({
-      fallbackLanguage: 'fa',
-      loaderOptions: {
-        path: path.join(__dirname, '/i18n/'),
-        watch: true,
-      },
-    }),
+    // I18nModule.forRoot({
+    //   fallbackLanguage: 'fa',
+    //   loaderOptions: {
+    //     path: path.join(__dirname, '/i18n/'),
+    //     watch: true,
+    //   },
+    // }),
 
     AuthModule,
     UserModule,
