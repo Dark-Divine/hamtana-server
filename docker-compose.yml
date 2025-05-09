@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16.1
+    container_name: hamtana_pg
+    env_file:
+      - .env
+    restart: always
+    ports:
+      - 5433:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hamtana_network
+
+networks:
+  hamtana_network:
+    name: hamtana_network
+
+volumes:
+  postgres_data:
