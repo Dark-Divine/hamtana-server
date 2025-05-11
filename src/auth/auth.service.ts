@@ -1,26 +1,76 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { User } from '@/user/entities/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
+import { UserService } from '@/user/user.service';
+import { CrudService } from '@/base';
+import { Repository } from 'typeorm';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
-export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+export class AuthService extends CrudService<User> {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private jwtService: JwtService,
+  ) {
+    super(userRepository);
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async generatePayload(user: User) {
+    const payload = {
+      context: {
+        id: user.id,
+        role: user.role,
+      },
+    };
+
+    const token = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: process.env.JWT_EXPIRE,
+    });
+
+    const { password: _, ...newUser } = user;
+
+    return { token, user: newUser };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+  async validateGoogleLogin(profile: {
+    id: string;
+    email: string;
+    avatar: string;
+  }) {
+    let user = await this.userRepository.findOne({
+      where: { googleId: profile.id },
+    });
+    if (!user) {
+      user = this.userRepository.create({
+        email: profile.email,
+        googleId: profile.id,
+        avatar: profile.avatar,
+      });
+      await this.userRepository.save(user);
+    }
+    return this.generatePayload(user);
   }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+  async registerWithEmail(data: RegisterDto) {
+    const findEmail = await this.userRepository.findOne({
+      where: {
+        email: data.email.toLowerCase(),
+      },
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+    if (findEmail)
+      throw new ConflictException('کاربر با این ایمیل از قبل وجود دارد');
+
+    const newUser = await this.userRepository.create({
+      email: data.email,
+      password: data.password,
+    });
+
+    this.userRepository.save(newUser);
+
+    return await this.generatePayload(newUser);
   }
 }
